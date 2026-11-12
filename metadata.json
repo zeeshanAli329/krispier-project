@@ -1,0 +1,6 @@
+{
+  "name": "KRISPIER — Delight In Every Sauce",
+  "description": "KRISPIER Fast Food Restaurant & Management System in Kasur, Pakistan. Digital QR table ordering, kitchen display system, staff portal, and SaaS operations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
