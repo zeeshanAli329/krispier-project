@@ -169,22 +169,52 @@ export const memoryStore: IStoreData = {
 
 export async function initDatabase() {
   const uri = process.env.MONGODB_URI;
+  const production = process.env.NODE_ENV === 'production';
 
   if (uri && uri.startsWith('mongodb')) {
     try {
       console.log('Connecting to MongoDB Atlas...');
       await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
       isMongoConnected = true;
+      if (production) await loadExistingData();
       console.log('✅ Successfully connected to MongoDB Atlas!');
     } catch (err: any) {
+      if (production) {
+        throw new Error(`Production requires a reachable MongoDB database: ${err.message}`);
+      }
       console.warn('⚠️ MongoDB connection attempt failed, running with resilient embedded store:', err.message);
       isMongoConnected = false;
     }
   } else {
+    if (production) {
+      throw new Error('MONGODB_URI is required in production. Refusing to start with temporary in-memory data.');
+    }
     console.log('ℹ️ MONGODB_URI not provided or local. Using resilient embedded memory storage with full schema matching.');
   }
 
-  await seedInitialData();
+  if (!production) await seedInitialData();
+}
+
+async function loadExistingData() {
+  const [users, categories, foods, tables, orders, notifications, reviews, settings] = await Promise.all([
+    UserModel.find().lean(),
+    CategoryModel.find().lean(),
+    FoodModel.find().lean(),
+    TableModel.find().lean(),
+    OrderModel.find().lean(),
+    NotificationModel.find().sort({ createdAt: -1 }).lean(),
+    ReviewModel.find().lean(),
+    SettingModel.findOne().lean(),
+  ]);
+
+  memoryStore.users = users;
+  memoryStore.categories = categories;
+  memoryStore.foods = foods;
+  memoryStore.tables = tables;
+  memoryStore.orders = orders;
+  memoryStore.notifications = notifications;
+  memoryStore.reviews = reviews;
+  memoryStore.settings = settings || {};
 }
 
 export function isDbConnected(): boolean {

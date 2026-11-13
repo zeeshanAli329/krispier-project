@@ -1,43 +1,45 @@
-// declare const process: { env: Record<string, string | undefined> };
-
-// const backendBaseUrl = process.env.API_BASE_URL?.replace(/\/$/, '');
-
-// if (!backendBaseUrl) {
-//   throw new Error(
-//     'API_BASE_URL must be configured in Vercel as the public origin of the deployed Express backend.'
-//   );
-// }
-
-// export const config = {
-//   rewrites: [
-//     { source: '/api/:path*', destination: `${backendBaseUrl}/api/:path*` },
-//     { source: '/socket.io/:path*', destination: `${backendBaseUrl}/socket.io/:path*` },
-//     { source: '/(.*)', destination: '/index.html' },
-//   ],
-// };
-
-
-
 import { routes, type VercelConfig } from '@vercel/config/v1';
 
-const backendBaseUrl = process.env.API_BASE_URL?.replace(/\/$/, '');
+const configuredBackendUrl = process.env.API_BASE_URL?.trim();
 
-if (!backendBaseUrl) {
-  throw new Error(
-    'API_BASE_URL is missing. Configure your deployed Express backend URL in Vercel.'
-  );
+function getBackendOrigin(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+
+  let backendUrl: URL;
+  try {
+    backendUrl = new URL(value);
+  } catch {
+    throw new Error('API_BASE_URL must be the HTTPS origin of the deployed Express backend.');
+  }
+
+  if (
+    backendUrl.protocol !== 'https:' ||
+    backendUrl.username ||
+    backendUrl.password ||
+    backendUrl.pathname !== '/' ||
+    backendUrl.search ||
+    backendUrl.hash
+  ) {
+    throw new Error(
+      'API_BASE_URL must be an HTTPS origin only (for example, https://your-backend-host.example), without a path or credentials.'
+    );
+  }
+
+  return backendUrl.origin;
 }
 
+const backendOrigin = getBackendOrigin(configuredBackendUrl);
+
 export const config: VercelConfig = {
+  buildCommand: 'npm run build',
+  outputDirectory: 'dist',
   rewrites: [
-    routes.rewrite(
-      '/api/:path*',
-      `${backendBaseUrl}/api/:path*`
-    ),
-    routes.rewrite(
-      '/socket.io/:path*',
-      `${backendBaseUrl}/socket.io/:path*`
-    ),
+    ...(backendOrigin
+      ? [
+          routes.rewrite('/api/:path*', `${backendOrigin}/api/:path*`),
+          routes.rewrite('/socket.io/:path*', `${backendOrigin}/socket.io/:path*`),
+        ]
+      : []),
     routes.rewrite('/(.*)', '/index.html'),
   ],
 };

@@ -195,7 +195,7 @@ function MainApp() {
 
       <HeroSection
         onExploreMenu={() => scrollToSection('menu')}
-        onReserveTable={() => scrollToSection('reservation')}
+        onOrderNow={() => scrollToSection('menu')}
       />
 
       <StorySection />

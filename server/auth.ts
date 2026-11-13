@@ -1,7 +1,11 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'smartdine_jwt_secret_token_secure_2026_xyz';
+const JWT_SECRET = process.env.JWT_SECRET || (
+  process.env.NODE_ENV === 'production'
+    ? (() => { throw new Error('JWT_SECRET is required in production.'); })()
+    : 'smartdine_jwt_secret_token_secure_2026_xyz'
+);
 
 export interface AuthUser {
   id: string;
