@@ -55,6 +55,7 @@ function MainApp() {
   const [foods, setFoods] = useState<FoodItem[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
+  const [publicDataError, setPublicDataError] = useState<string | null>(null);
 
   // Listen to popstate (back/forward browser buttons)
   useEffect(() => {
@@ -76,9 +77,14 @@ function MainApp() {
 
   // Load public menu and review data for the storefront
   useEffect(() => {
-    api.getCategories().then(setCategories).catch(() => {});
-    api.getFoods().then(setFoods).catch(() => {});
-    api.getReviews().then(setReviews).catch(() => {});
+    const reportLoadError = (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Unexpected API response.';
+      setPublicDataError((current) => current ? `${current} ${message}` : message);
+    };
+
+    api.getCategories().then(setCategories).catch(reportLoadError);
+    api.getFoods().then(setFoods).catch(reportLoadError);
+    api.getReviews().then(setReviews).catch(reportLoadError);
   }, []);
 
   // Handle post-login redirection based on role
@@ -180,6 +186,12 @@ function MainApp() {
   return (
     <div className="min-h-screen bg-[#151515] text-[#D1D5DB] flex flex-col font-sans selection:bg-[#FFC400] selection:text-black">
       <Navbar />
+
+      {publicDataError && (
+        <div role="alert" className="bg-[#3b1d1d] border-y border-[#7f1d1d] px-4 py-3 text-sm text-red-200">
+          Menu and review data could not be loaded: {publicDataError}
+        </div>
+      )}
 
       <HeroSection
         onExploreMenu={() => scrollToSection('menu')}

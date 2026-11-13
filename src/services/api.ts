@@ -43,13 +43,44 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers,
   });
 
-  const data = await res.json().catch(() => ({}));
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.toLowerCase().includes('application/json')) {
+    throw new Error(
+      `API ${endpoint} returned ${contentType || 'a non-JSON response'} (HTTP ${res.status}). ` +
+      'Check the Vercel API rewrite and API_BASE_URL backend configuration.'
+    );
+  }
+
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`API ${endpoint} returned invalid JSON (HTTP ${res.status}).`);
+  }
 
   if (!res.ok) {
-    throw new Error(data.message || `Request failed with status ${res.status}`);
+    const message = data && typeof data === 'object' && 'message' in data
+      ? String(data.message)
+      : `Request failed with status ${res.status}`;
+    throw new Error(message);
   }
 
   return data as T;
+}
+
+async function requestArray<T>(endpoint: string, options?: RequestInit): Promise<T[]> {
+  const data: unknown = await request<unknown>(endpoint, options);
+  if (!Array.isArray(data)) {
+    throw new TypeError(`API ${endpoint} expected an array response, received ${describeResponse(data)}.`);
+  }
+  return data as T[];
+}
+
+function describeResponse(value: unknown): string {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'an array';
+  if (typeof value === 'object') return 'an object';
+  return `a ${typeof value}`;
 }
 
 export const api = {
@@ -62,7 +93,7 @@ export const api = {
   getMe: () => request<{ user: User }>('/api/auth/me'),
 
   // Categories
-  getCategories: () => request<Category[]>('/api/categories'),
+  getCategories: () => requestArray<Category>('/api/categories'),
   createCategory: (data: Partial<Category>) =>
     request<Category>('/api/categories', { method: 'POST', body: JSON.stringify(data) }),
   updateCategory: (id: string, data: Partial<Category>) =>
@@ -75,7 +106,7 @@ export const api = {
     if (params?.category) query.set('category', params.category);
     if (params?.search) query.set('search', params.search);
     if (params?.availableOnly) query.set('availableOnly', 'true');
-    return request<FoodItem[]>(`/api/foods?${query.toString()}`);
+    return requestArray<FoodItem>(`/api/foods?${query.toString()}`);
   },
   createFood: (data: Partial<FoodItem>) =>
     request<FoodItem>('/api/foods', { method: 'POST', body: JSON.stringify(data) }),
@@ -86,7 +117,7 @@ export const api = {
   deleteFood: (id: string) => request<{ message: string }>(`/api/foods/${id}`, { method: 'DELETE' }),
 
   // Tables
-  getTables: () => request<TableItem[]>('/api/tables'),
+  getTables: () => requestArray<TableItem>('/api/tables'),
   getTableByNumber: (tableNumber: string) => request<TableItem>(`/api/tables/${tableNumber}`),
   createTable: (data: Partial<TableItem>) =>
     request<TableItem>('/api/tables', { method: 'POST', body: JSON.stringify(data) }),
@@ -100,7 +131,7 @@ export const api = {
     if (params?.status) query.set('status', params.status);
     if (params?.type) query.set('type', params.type);
     if (params?.tableNumber) query.set('tableNumber', params.tableNumber);
-    return request<Order[]>(`/api/orders?${query.toString()}`);
+    return requestArray<Order>(`/api/orders?${query.toString()}`);
   },
   getOrderById: (id: string) => request<Order>(`/api/orders/${id}`),
   createOrder: (orderData: any) =>
@@ -122,7 +153,7 @@ export const api = {
     }),
 
   // Staff
-  getStaff: () => request<User[]>('/api/staff'),
+  getStaff: () => requestArray<User>('/api/staff'),
   createStaff: (data: any) => request<User>('/api/staff', { method: 'POST', body: JSON.stringify(data) }),
   updateStaff: (id: string, data: any) =>
     request<User>(`/api/staff/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -135,7 +166,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ orderId, paymentMethod }),
     }),
-  getBillingHistory: () => request<Order[]>('/api/billing/history'),
+  getBillingHistory: () => requestArray<Order>('/api/billing/history'),
 
   // Reports
   getDashboardStats: () =>
@@ -152,7 +183,7 @@ export const api = {
     }>('/api/reports/dashboard'),
 
   // Reviews
-  getReviews: () => request<Review[]>('/api/reviews'),
+  getReviews: () => requestArray<Review>('/api/reviews'),
   createReview: (data: { customerName: string; rating: number; comment: string; dishName?: string }) =>
     request<Review>('/api/reviews', { method: 'POST', body: JSON.stringify(data) }),
 
@@ -162,7 +193,7 @@ export const api = {
     request<RestaurantSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(data) }),
 
   // Notifications
-  getNotifications: () => request<NotificationItem[]>('/api/notifications'),
+  getNotifications: () => requestArray<NotificationItem>('/api/notifications'),
   markNotificationRead: (id: string) =>
     request<{ success: boolean }>(`/api/notifications/${id}/read`, { method: 'PATCH' }),
 };
