@@ -27,6 +27,8 @@ export const TableMenu: React.FC<TableMenuProps> = ({ tableNumber }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadCount, setReloadCount] = useState(0);
 
   // Cart for this table
   const [cartItems, setCartItems] = useState<
@@ -52,6 +54,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ tableNumber }) => {
     async function loadData() {
       try {
         setLoading(true);
+        setLoadError(null);
         const [cats, foodList, tblList] = await Promise.all([
           api.getCategories(),
           api.getFoods({ availableOnly: true }),
@@ -73,6 +76,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ tableNumber }) => {
         }
       } catch (err) {
         console.error('Error loading table menu:', err);
+        setLoadError(err instanceof Error ? err.message : 'Could not load menu data. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -94,7 +98,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ tableNumber }) => {
     return () => {
       unsubOrder();
     };
-  }, [tableNumber]);
+  }, [tableNumber, reloadCount]);
 
   // Cart helper functions
   const addToCart = (food: FoodItem, qty = 1, notes = '') => {
@@ -131,6 +135,13 @@ export const TableMenu: React.FC<TableMenuProps> = ({ tableNumber }) => {
   // Place Table Order
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) return;
+    if (!table) {
+      setFeedbackMsg({
+        type: 'info',
+        text: `Table ${tableNumber.toUpperCase()} could not be verified. The order was not sent.`,
+      });
+      return;
+    }
     setIsSubmitting(true);
     try {
       const orderPayload = {
@@ -253,7 +264,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ tableNumber }) => {
             <button
               type="button"
               onClick={handleCallWaiter}
-              disabled={waiterCalled}
+              disabled={waiterCalled || !table}
               className={`cursor-pointer flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-sm ${
                 waiterCalled
                   ? 'bg-[#FFC400] text-black'
@@ -289,6 +300,21 @@ export const TableMenu: React.FC<TableMenuProps> = ({ tableNumber }) => {
               className="cursor-pointer text-xs text-[#FFC400] hover:text-white font-bold ml-2"
             >
               Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loadError && (
+        <div role="alert" className="max-w-4xl mx-auto px-4 pt-4 w-full">
+          <div className="p-4 bg-[#3b1d1d] border border-[#7f1d1d] text-red-100 text-sm rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <span>Menu data could not be loaded: {loadError}</span>
+            <button
+              type="button"
+              onClick={() => setReloadCount((count) => count + 1)}
+              className="cursor-pointer shrink-0 px-4 py-2 bg-[#222222] hover:bg-[#2d2d2d] text-white text-xs font-black uppercase tracking-wider rounded-lg border border-[#7f1d1d]"
+            >
+              Retry
             </button>
           </div>
         </div>
@@ -523,7 +549,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ tableNumber }) => {
             <button
               type="button"
               onClick={handlePlaceOrder}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !table}
               className="cursor-pointer py-3.5 px-6 bg-[#FFC400] hover:bg-[#FFB800] text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-lg flex items-center gap-2"
             >
               <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
