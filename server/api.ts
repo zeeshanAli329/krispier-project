@@ -18,6 +18,14 @@ import { broadcastEvent } from './socket.js';
 
 export const apiRouter = Router();
 
+apiRouter.get('/health', (_req: Request, res: Response) => {
+  const databaseConnected = isDbConnected();
+  return res.status(databaseConnected ? 200 : 503).json({
+    status: databaseConnected ? 'ok' : 'database_unavailable',
+    database: databaseConnected ? 'connected' : 'disconnected',
+  });
+});
+
 // ==========================================
 // 1. AUTHENTICATION & STAFF LOGIN
 // ==========================================

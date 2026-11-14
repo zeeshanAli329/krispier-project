@@ -3,11 +3,15 @@ import type { Server as HTTPServer } from 'http';
 
 let io: SocketIOServer | null = null;
 
-export function initSocketIO(server: HTTPServer) {
+export function initSocketIO(server: HTTPServer, allowedOrigins: string[] = []) {
   io = new SocketIOServer(server, {
     cors: {
-      origin: '*',
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
+    },
+    allowRequest: (req, callback) => {
+      const origin = req.headers.origin;
+      callback(null, !origin || allowedOrigins.includes(origin));
     },
   });
 

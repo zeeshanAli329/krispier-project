@@ -171,10 +171,10 @@ export async function initDatabase() {
   const uri = process.env.MONGODB_URI;
   const production = process.env.NODE_ENV === 'production';
 
-  if (uri && uri.startsWith('mongodb')) {
+  if (uri && (uri.startsWith('mongodb://') || uri.startsWith('mongodb+srv://'))) {
     try {
       console.log('Connecting to MongoDB Atlas...');
-      await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+      await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
       isMongoConnected = true;
       if (production) await loadExistingData();
       console.log('✅ Successfully connected to MongoDB Atlas!');
@@ -187,7 +187,7 @@ export async function initDatabase() {
     }
   } else {
     if (production) {
-      throw new Error('MONGODB_URI is required in production. Refusing to start with temporary in-memory data.');
+      throw new Error('A valid MONGODB_URI is required in production. Refusing to start with temporary in-memory data.');
     }
     console.log('ℹ️ MONGODB_URI not provided or local. Using resilient embedded memory storage with full schema matching.');
   }
