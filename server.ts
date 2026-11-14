@@ -29,6 +29,9 @@ async function startServer() {
 
   // API Routes
   app.use('/api', apiRouter);
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ message: 'API endpoint not found' });
+  });
 
   // Vite integration
   const isProduction = process.env.NODE_ENV === 'production';

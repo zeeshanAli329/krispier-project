@@ -78,8 +78,8 @@ function MainApp() {
   // Load public menu and review data for the storefront
   useEffect(() => {
     const reportLoadError = (error: unknown) => {
-      const message = error instanceof Error ? error.message : 'Unexpected API response.';
-      setPublicDataError((current) => current ? `${current} ${message}` : message);
+      console.error('Unable to load public menu and review data:', error);
+      setPublicDataError('Menu and review data are temporarily unavailable. Please try again later.');
     };
 
     api.getCategories().then(setCategories).catch(reportLoadError);

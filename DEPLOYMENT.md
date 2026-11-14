@@ -10,9 +10,9 @@ Configure the backend host with the existing `MONGODB_URI` value and the current
 
 ## Vercel frontend
 
-In the existing Vercel project's Environment Variables, set `API_BASE_URL` to the public HTTPS origin of the deployed Express backend (origin only, without `/api`, paths, or credentials). Use the actual host assigned by the backend provider; do not use an example hostname. Redeploy the existing Vercel project after adding it.
+In the existing Vercel project's Environment Variables, set `API_BASE_URL` to the public HTTPS origin of the deployed Express backend (origin only, without `/api`, paths, or credentials). Use the actual host assigned by the backend provider; do not use an example hostname. Set it for every Vercel environment where this project is deployed, then redeploy the existing Vercel project.
 
-`vercel.ts` uses this value to proxy `/api/*` and `/socket.io/*` to Express, then sends normal application routes to `index.html`. If it is unset, Vercel can still build and serve the frontend, but API and real-time functionality will not work; the frontend reports an API response error. This allows frontend deployment before a backend URL exists without inventing one. The browser continues to use the existing Vercel domain. The URL is a public service address, not a credential.
+`vercel.ts` uses this value to proxy `/api/*` and `/socket.io/*` to Express, then sends normal application routes to `index.html`. It deliberately fails configuration when the value is unset or invalid, preventing API paths from silently falling through to the frontend. The browser continues to use the existing Vercel domain. The URL is a public service address, not a credential.
 
 If the backend is not deployed yet, deploy this repository's Express server first, then use its assigned HTTPS origin as `API_BASE_URL`. The application domain does not need to change. The backend has not been verified as deployed by this repository change; no backend hostname is currently configured here.
 

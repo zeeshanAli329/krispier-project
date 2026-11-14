@@ -2,6 +2,12 @@ import { routes, type VercelConfig } from '@vercel/config/v1';
 
 const configuredBackendUrl = process.env.API_BASE_URL?.trim();
 
+if (!configuredBackendUrl) {
+  throw new Error(
+    'API_BASE_URL is required for production deployments. Set it to the HTTPS origin of the deployed Express backend.'
+  );
+}
+
 function getBackendOrigin(value: string | undefined): string | undefined {
   if (!value) return undefined;
 
@@ -34,12 +40,8 @@ export const config: VercelConfig = {
   buildCommand: 'npm run build',
   outputDirectory: 'dist',
   rewrites: [
-    ...(backendOrigin
-      ? [
-          routes.rewrite('/api/:path*', `${backendOrigin}/api/:path*`),
-          routes.rewrite('/socket.io/:path*', `${backendOrigin}/socket.io/:path*`),
-        ]
-      : []),
+    routes.rewrite('/api/:path*', `${backendOrigin}/api/:path*`),
+    routes.rewrite('/socket.io/:path*', `${backendOrigin}/socket.io/:path*`),
     routes.rewrite('/(.*)', '/index.html'),
   ],
 };
